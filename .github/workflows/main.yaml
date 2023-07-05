@@ -1,0 +1,85 @@
+---
+name : Build and Push react Image to AWS ECR
+on:
+  push:
+    branches: [main]
+jobs:
+  build-and-push:
+    name: Build and Push to ECR
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-northeast-2
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    # - name: Automatic Tagging of Releases
+    #   id: increment-git-tag
+    #   run: |
+    #     bash ./build/git_update.sh -v major
+
+    - name: Build, Tag, and Push the Image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: cicd-test
+        # IMAGE_TAG: latest
+      run: |
+        # Build a docker container and push it to ECR
+        git_hash=$(git rev-parse --short "$GITHUB_SHA")
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${GITHUB_REF##*/}-$git_hash .
+        echo "Pushing image to ECR..."
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:${GITHUB_REF##*/}-$git_hash
+        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:${GITHUB_REF##*/}-$git_hash"
+        
+    - name: Update Version
+      run: |
+          git_hash=$(git rev-parse --short "$GITHUB_SHA")
+          version=$(cat ./charts/helm/values.yaml | grep version: | awk '{print $2}')
+          sed -i "s/$version/${GITHUB_REF##*/}-$git_hash/" ./charts/helm/values.yaml
+
+    # - name: repository checkout
+    #   uses: actions/checkout@v2
+    #   with:
+    #     repository: Hyeong-Yun/cicd-test
+    #     token: ${{ secrets.MY_GITHUB_TOKEN }}
+    #     path: charts/helm/templates
+
+    # - name: Add date and push
+    #   run: |
+    #     GIT_HASH=$(git rev-parse --short "$GITHUB_SHA")
+    #     cd charts/helm/templates
+    #     sed -i "10s/.*/  - image: $ECR_REGISTRY\/$ECR_REPOSITORY:$GIT_HASH/g" deployment.yaml
+    #     git add .
+    #     git config --global user.email "guddbs5545@naver.com"
+    #     git config --global user.name "hyeongyun"
+    #     git commit -am "Inject Tag"
+    #     git push
+    
+    # # Helm
+    # - name: Install Helm
+    #   run: |
+    #     curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
+    # - name: Package Helm chart
+    #   run: |
+    #     helm package path/to/chart --version ${GITHUB_SHA:0:7}
+    #     mv path/to/chart-*.tgz mychart.tgz
+
+    # - name: Deploy with Argo CD
+    #   run: |
+    #     argocd app create myapp --repo <repository_url> --path <path_to_app> --dest-server https://kubernetes.default.svc --dest-namespace mynamespace --helm-set image.tag=${GITHUB_SHA:0:7} --sync-policy automated
+    #     argocd app sync myapp
+
+    # - name: Verify deployment
+    #   run: |
+    #     kubectl get pods --namespace mynamespace
