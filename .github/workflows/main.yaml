@@ -44,7 +44,7 @@ jobs:
     - name: Update Version
       run: |
           git_hash=$(git rev-parse --short "$GITHUB_SHA")
-          version=$(cat ./charts/helm/values.yaml | grep version: | awk '{print $2}')
+          version=$(cat ./helm/charts/values.yaml | grep version: | awk '{print $2}')
           sed -i "s/$version/${GITHUB_REF##*/}-$git_hash/" ./helm/charts/values.yaml
 
     # - name: repository checkout
