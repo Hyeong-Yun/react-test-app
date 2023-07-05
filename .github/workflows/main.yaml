@@ -44,26 +44,26 @@ jobs:
     - name: Update Version
       run: |
           git_hash=$(git rev-parse --short "$GITHUB_SHA")
-          version=$(cat ./helm/charts/values.yaml | grep version: | awk '{print $2}')
-          sed -i "s/$version/${GITHUB_REF##*/}-$git_hash/" ./helm/charts/values.yaml
+          version=$(cat ./charts/helm/values.yaml | grep version: | awk '{print $2}')
+          sed -i "s/$version/${GITHUB_REF##*/}-$git_hash/" ./charts/helm/values.yaml
 
-    # - name: repository checkout
-    #   uses: actions/checkout@v2
-    #   with:
-    #     repository: Hyeong-Yun/cicd-test
-    #     token: ${{ secrets.MY_GITHUB_TOKEN }}
-    #     path: charts/helm/templates
+    - name: repository checkout
+      uses: actions/checkout@v2
+      with:
+        repository: Hyeong-Yun/cicd-test
+        token: ${{ secrets.MY_GITHUB_TOKEN }}
+        path: charts/helm/templates
 
-    # - name: Add date and push
-    #   run: |
-    #     GIT_HASH=$(git rev-parse --short "$GITHUB_SHA")
-    #     cd charts/helm/templates
-    #     sed -i "10s/.*/  - image: $ECR_REGISTRY\/$ECR_REPOSITORY:$GIT_HASH/g" deployment.yaml
-    #     git add .
-    #     git config --global user.email "guddbs5545@naver.com"
-    #     git config --global user.name "hyeongyun"
-    #     git commit -am "Inject Tag"
-    #     git push
+    - name: Add date and push
+      run: |
+        GIT_HASH=$(git rev-parse --short "$GITHUB_SHA")
+        cd charts/helm/templates
+        sed -i "10s/.*/  - image: $ECR_REGISTRY\/$ECR_REPOSITORY:$GIT_HASH/g" deployment.yaml
+        git add .
+        git config --global user.email "guddbs5545@naver.com"
+        git config --global user.name "hyeongyun"
+        git commit -am "Inject Tag"
+        git push
     
     # # Helm
     # - name: Install Helm
